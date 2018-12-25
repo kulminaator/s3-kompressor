@@ -41,7 +41,7 @@
 
 (defn roll-zip-if-needed
   [^ZipOutputStream current-stream filename-base written next-roll]
-  (println (str  " *** " current-stream " > " filename-base " > " written " > " next-roll))
+  ;(println (str  " *** " current-stream " > " filename-base " > " written " > " next-roll))
   (if (and (some? next-roll) (>  written next-roll))
     (do
         (.flush current-stream)
@@ -59,7 +59,7 @@
          next-roll split-size]
         (if file-to-add
           (do
-            (println (str "Adding " (:name file-to-add) " at " written + " next roll " + next-roll))
+            ;(println (str "Adding " (:name file-to-add) " at " written + " next roll " + next-roll))
             (.putNextEntry zip-output (create-zip-entry (:name file-to-add) (:modified-at file-to-add)))
             (with-open [instream (open-stream (:input-stream-fn file-to-add))]
               (clojure.java.io/copy instream zip-output :buffer-size 32768))
