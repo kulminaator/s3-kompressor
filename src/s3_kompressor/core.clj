@@ -27,7 +27,9 @@
   [options]
   (assert (contains? options "--bucket") "--bucket not specified, see help")
   (when some? (get "--split-size" options)
-    (assert (nil? (parse-int (get "--split-size" options))) "--split-size must have integer value")))
+    (assert (nil? (parse-int (get "--split-size" options))) "--split-size must have integer value"))
+  (when some? (get "--writer-threads" options)
+    (assert (nil? (parse-int (get "--writer-threads" options))) "--writer-threads must have integer value")))
 
 (defn guess-split-size
   "Returns byte count for split size (input is in megabytes or nil, in which case 10 megabytes is chosen)."
@@ -41,13 +43,15 @@
   (let [bucket (get (:options params) "--bucket")
         prefix (get (:options params) "--prefix")
         split-size-mb (parse-int (get (:options params) "--split-size"))
-         transport-channel (async/chan 25)]
+        writer-threads (or (parse-int (get (:options params) "--writer-threads")) 1)
+        transport-channel (async/chan 25)]
     (println "Allocated internal channel of 25 elements")
     (async/thread (s3/list-objects-to-channel bucket prefix transport-channel))
     (z/write-zip-from
      "/tmp/test"
      transport-channel
      (guess-split-size split-size-mb)
+     writer-threads
      )))
 
 (defn parse-params
