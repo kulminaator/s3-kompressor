@@ -70,17 +70,27 @@
       (.close zip-output))
     ))
 
+(defn irange
+  "Inclusive range (irange 1 3) returns 1 2 3."
+  [low high]
+  (range low (inc high)))
+
+(defn dispatch-internal-zip-writers
+  "Dispatches a worker thread for filename to write contents from transport-channel into it. Returns list of channels
+  that contain the results of threads once they are done."
+  [transport-channel split-size filenames]
+  (map #(async/thread (internal-write-zip-from % transport-channel split-size)) filenames))
 
 (defn write-zip-from
   "Keeps on taking elements from channel and writes them to the zipfile.
   Tries to create splitted files if split-size is not nil. Uses writer threads amount of threads to work on multiple
   files at once to use more cpu cores."
   [filename-base transport-channel split-size writer-threads]
-  (doall (map async/<!! (doall (->>
-          (range 1 (inc writer-threads))
-          (map #(str filename-base "_" %))
-          (map #(async/thread (internal-write-zip-from % transport-channel split-size)))))))
-  )
+  (doall (map async/<!!
+              (->>
+               (irange 1 writer-threads)
+               (map #(str filename-base "_" %))
+               (dispatch-internal-zip-writers transport-channel split-size)))))
 
 
 

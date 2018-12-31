@@ -8,7 +8,7 @@
 
   :dependencies
   [
-    [org.clojure/clojure "1.10.0-RC4"]
+    [org.clojure/clojure "1.10.0"]
     [org.clojure/core.async "0.4.490"]
 
     [com.amazonaws/aws-java-sdk-s3 "1.11.465"]
