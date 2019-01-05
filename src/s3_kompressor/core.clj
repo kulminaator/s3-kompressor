@@ -36,6 +36,9 @@
   [split-size-mb]
   (* (or split-size-mb 10) 1024 1024))
 
+(defn pretty-timestamp[]
+  "right-now")
+
 (defn simple-zip-file
   "Creates one big zip file or many small ones based on options and input provided."
   [params]
@@ -47,12 +50,12 @@
         transport-channel (async/chan 25)]
     (println "Allocated internal channel of 25 elements")
     (async/thread (s3/list-objects-to-channel bucket prefix transport-channel))
-    (z/write-zip-from
-     "/tmp/test"
-     transport-channel
-     (guess-split-size split-size-mb)
-     writer-threads
-     )))
+    (z/write-zips-from {
+                        :filename-base (str "/tmp/backup.part." (pretty-timestamp))
+                        :transport-channel transport-channel
+                        :split-size (guess-split-size split-size-mb)
+                        :writer-threads writer-threads
+     })))
 
 (defn parse-params
   "Parses the command line arguments for paramsuration"
