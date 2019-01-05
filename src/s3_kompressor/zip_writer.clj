@@ -49,16 +49,27 @@
         (ZipOutputStream. (clojure.java.io/output-stream (make-zip-name filename-base written))))
     current-stream))
 
-(defn workpoint-offset [workpoint]
+(defn workpoint-offset
+  "Calculates the offset after this workpoint has been done."
+  [workpoint]
   (+ (:written workpoint)
      (:size (:file-to-add workpoint))))
+
+(defn add-file-top-zip-output
+  "File has to be a map of :name, :modified-at and :input-stream-fn (function to open stream for reading)."
+  [file-to-add zip-output]
+  (.putNextEntry zip-output (create-zip-entry (:name file-to-add)
+                                              (:modified-at file-to-add)))
+  (with-open [instream (open-stream (:input-stream-fn file-to-add))]
+    (clojure.java.io/copy instream zip-output :buffer-size 32768)))
 
 (defn internal-write-zip-from
   "Keeps on taking elements from channel and writes them to the zipfile.
   Tries to create splitted files if split-size is not nil."
   [settings filename-threaded-base]
   (loop [workpoint {
-                     :zip-output (ZipOutputStream. (clojure.java.io/output-stream (make-zip-name filename-threaded-base 0)))
+                     :zip-output (ZipOutputStream.
+                                   (clojure.java.io/output-stream (make-zip-name filename-threaded-base 0)))
                      :file-to-add (async/<!! (:transport-channel settings))
                      :written 0
                      :next-roll (:split-size settings)
@@ -68,11 +79,7 @@
         ; actual work
         (println (str "Adding " (:name (:file-to-add workpoint))
                       " at " (:written workpoint) " next roll " (:next-roll workpoint)))
-        (.putNextEntry (:zip-output workpoint) (create-zip-entry (:name (:file-to-add workpoint))
-                                                                 (:modified-at (:file-to-add workpoint))))
-        (with-open [instream (open-stream (:input-stream-fn (:file-to-add workpoint)))]
-          (clojure.java.io/copy instream (:zip-output workpoint) :buffer-size 32768))
-
+        (add-file-top-zip-output (:file-to-add workpoint) (:zip-output workpoint))
         ; recur block
         (recur
           (merge workpoint {
