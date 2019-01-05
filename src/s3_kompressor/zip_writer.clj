@@ -49,6 +49,10 @@
         (ZipOutputStream. (clojure.java.io/output-stream (make-zip-name filename-base written))))
     current-stream))
 
+(defn workpoint-offset [workpoint]
+  (+ (:written workpoint)
+     (:size (:file-to-add workpoint))))
+
 (defn internal-write-zip-from
   "Keeps on taking elements from channel and writes them to the zipfile.
   Tries to create splitted files if split-size is not nil."
@@ -73,14 +77,12 @@
         (recur
           (merge workpoint {
                              :zip-output (roll-zip-if-needed (:zip-output workpoint) filename-threaded-base
-                                                             (+ (:written workpoint)
-                                                                (:size (:file-to-add workpoint)))
+                                                             (workpoint-offset workpoint)
                                                              (:next-roll workpoint))
                              :file-to-add (async/<!! (:transport-channel settings))
-                             :written (+ (:written workpoint) (:size (:file-to-add workpoint)))
+                             :written (workpoint-offset workpoint)
                              :next-roll (increase-roll-if-needed
-                                         (+ (:written workpoint)
-                                            (:size (:file-to-add workpoint)))
+                                         (workpoint-offset workpoint)
                                          (:next-roll workpoint)
                                          (:split-size settings))
                              })
