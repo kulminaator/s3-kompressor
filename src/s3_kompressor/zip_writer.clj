@@ -39,15 +39,27 @@
     (+ written split-size)
     next-roll))
 
+(defn make-zip-output
+  [filename]
+  {
+    :stream (ZipOutputStream. (clojure.java.io/output-stream filename))
+    :filename filename
+    })
+
+(defn flush-and-close-zip-output
+  [zip-output]
+  (let [stream (:stream zip-output)]
+    (.flush stream)
+    (.close stream)))
+
 (defn roll-zip-if-needed
-  [^ZipOutputStream current-stream filename-base written next-roll]
+  [^ZipOutputStream current-output filename-base written next-roll]
   ;(println (str  " *** " current-stream " > " filename-base " > " written " > " next-roll))
   (if (and (some? next-roll) (>  written next-roll))
     (do
-        (.flush current-stream)
-        (.close current-stream)
-        (ZipOutputStream. (clojure.java.io/output-stream (make-zip-name filename-base written))))
-    current-stream))
+      (flush-and-close-zip-output current-output)
+      (make-zip-output (make-zip-name filename-base written)))
+    current-output))
 
 (defn workpoint-offset
   "Calculates the offset after this workpoint has been done."
@@ -58,18 +70,17 @@
 (defn add-file-top-zip-output
   "File has to be a map of :name, :modified-at and :input-stream-fn (function to open stream for reading)."
   [file-to-add zip-output]
-  (.putNextEntry zip-output (create-zip-entry (:name file-to-add)
+  (.putNextEntry (:stream zip-output) (create-zip-entry (:name file-to-add)
                                               (:modified-at file-to-add)))
   (with-open [instream (open-stream (:input-stream-fn file-to-add))]
-    (clojure.java.io/copy instream zip-output :buffer-size 32768)))
+    (clojure.java.io/copy instream (:stream zip-output) :buffer-size 32768)))
 
 (defn internal-write-zip-from
   "Keeps on taking elements from channel and writes them to the zipfile.
   Tries to create splitted files if split-size is not nil."
   [settings filename-threaded-base]
   (loop [workpoint {
-                     :zip-output (ZipOutputStream.
-                                   (clojure.java.io/output-stream (make-zip-name filename-threaded-base 0)))
+                     :zip-output (make-zip-output (make-zip-name filename-threaded-base 0))
                      :file-to-add (async/<!! (:transport-channel settings))
                      :written 0
                      :next-roll (:split-size settings)
@@ -94,7 +105,7 @@
                                          (:split-size settings))
                              })
           ))
-      (.close (:zip-output workpoint)))
+      (flush-and-close-zip-output (:zip-output workpoint)))
     ))
 
 (defn irange
@@ -108,7 +119,7 @@
   [settings filenames]
   (mapv #(async/thread (internal-write-zip-from settings %)) filenames))
 
-(defn write-zips-from
+(defn write-zips-from-channel
   "Keeps on taking elements from channel and writes them to the zipfile.
   Tries to create splitted files if split-size is not nil. Uses writer threads amount of threads to work on multiple
   files at once to use more cpu cores."

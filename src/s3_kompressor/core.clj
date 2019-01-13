@@ -50,7 +50,7 @@
         transport-channel (async/chan 25)]
     (println "Allocated internal channel of 25 elements")
     (async/thread (s3/list-objects-to-channel bucket prefix transport-channel))
-    (z/write-zips-from {
+    (z/write-zips-from-channel {
                         :filename-base (str "/tmp/backup.part." (pretty-timestamp))
                         :transport-channel transport-channel
                         :split-size (guess-split-size split-size-mb)
