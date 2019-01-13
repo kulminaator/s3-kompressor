@@ -21,7 +21,7 @@
     ;[com.cognitect.aws/endpoints "1.1.11.462"]
     ;[com.cognitect.aws/s3 "680.2.370.0"]
     ]
-  ; :global-vars {*warn-on-reflection* true}
+  ;:global-vars {*warn-on-reflection* true}
   :main ^:skip-aot s3-kompressor.core
   :target-path "target/%s"
   :profiles {:uberjar {:aot :all}})

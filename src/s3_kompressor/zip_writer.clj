@@ -48,12 +48,12 @@
 
 (defn flush-and-close-zip-output
   [zip-output]
-  (let [stream (:stream zip-output)]
+  (let [^ZipOutputStream stream (:stream zip-output)]
     (.flush stream)
     (.close stream)))
 
 (defn roll-zip-if-needed
-  [^ZipOutputStream current-output filename-base written next-roll]
+  [current-output filename-base written next-roll]
   ;(println (str  " *** " current-stream " > " filename-base " > " written " > " next-roll))
   (if (and (some? next-roll) (>  written next-roll))
     (do
@@ -70,7 +70,7 @@
 (defn add-file-top-zip-output
   "File has to be a map of :name, :modified-at and :input-stream-fn (function to open stream for reading)."
   [file-to-add zip-output]
-  (.putNextEntry (:stream zip-output) (create-zip-entry (:name file-to-add)
+  (.putNextEntry ^ZipOutputStream (:stream zip-output) (create-zip-entry (:name file-to-add)
                                               (:modified-at file-to-add)))
   (with-open [instream (open-stream (:input-stream-fn file-to-add))]
     (clojure.java.io/copy instream (:stream zip-output) :buffer-size 32768)))
