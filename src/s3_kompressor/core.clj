@@ -65,11 +65,14 @@
     {:command command
      :options options}))
 
-(defn -main
-  "Starts the tool."
-  [& args]
+(defn launch[args]
   (let [params (parse-params args)]
     (case (:command params)
       "simple-zip" (simple-zip-file params)
       "help" (show-help)
       (show-help (:command params)))))
+
+(defn -main
+  "Starts the tool."
+  [& args]
+  (launch args))
