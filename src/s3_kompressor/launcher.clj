@@ -1,6 +1,7 @@
 (ns s3-kompressor.launcher
   (:gen-class
-    :name org.kulminaator.s3.kompressor.Launcher)
+    :name org.kulminaator.s3.kompressor.Launcher
+    :methods [#^{:static true} [launch [java.util.List] void]])
   (:require [s3-kompressor.core :as s3core]))
 
 (defn launch[^java.util.List args]
