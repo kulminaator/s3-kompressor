@@ -47,17 +47,19 @@
     })
 
 (defn flush-and-close-zip-output
-  [zip-output]
+  [zip-output settings]
   (let [^ZipOutputStream stream (:stream zip-output)]
     (.flush stream)
-    (.close stream)))
+    (.close stream)
+    ;; register the closed zip file to be uploaded into s3
+    (async/>!! (:upload-channel settings) {:filename (:filename zip-output)})))
 
 (defn roll-zip-if-needed
-  [current-output filename-base written next-roll]
+  [current-output filename-base written next-roll settings]
   ;(println (str  " *** " current-stream " > " filename-base " > " written " > " next-roll))
   (if (and (some? next-roll) (>  written next-roll))
     (do
-      (flush-and-close-zip-output current-output)
+      (flush-and-close-zip-output current-output settings)
       (make-zip-output (make-zip-name filename-base written)))
     current-output))
 
@@ -96,7 +98,8 @@
           (merge workpoint {
                              :zip-output (roll-zip-if-needed (:zip-output workpoint) filename-threaded-base
                                                              (workpoint-offset workpoint)
-                                                             (:next-roll workpoint))
+                                                             (:next-roll workpoint)
+                                                             settings)
                              :file-to-add (async/<!! (:transport-channel settings))
                              :written (workpoint-offset workpoint)
                              :next-roll (increase-roll-if-needed
@@ -105,7 +108,7 @@
                                          (:split-size settings))
                              })
           ))
-      (flush-and-close-zip-output (:zip-output workpoint)))
+      (flush-and-close-zip-output (:zip-output workpoint) settings))
     ))
 
 (defn irange

@@ -8,7 +8,7 @@
   []
   (-> (AmazonS3ClientBuilder/standard)
       (.withRegion "eu-west-1")
-      ;(.withCredentials (com.amazonaws.auth.AWSStaticCredentialsProvider. (com.amazonaws.auth.AnonymousAWSCredentials.)))
+      (.withCredentials (com.amazonaws.auth.AWSStaticCredentialsProvider. (com.amazonaws.auth.AnonymousAWSCredentials.)))
       (.build)))
 
 (defn ^String extract-next-token
@@ -100,9 +100,8 @@
   (async/thread
    (loop [uploadable (async/<!! upload-channel)]
      (when uploadable
-       (handle-upload upload-target (async/<!! upload-channel))
-       (recur [uploadable (async/<!! upload-channel)]))
-     )
+       (handle-upload upload-target uploadable)
+       (recur (async/<!! upload-channel))))
    "upload worker done"))
 
 (defn build-uploaders
