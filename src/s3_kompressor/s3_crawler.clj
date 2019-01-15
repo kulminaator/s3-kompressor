@@ -101,7 +101,8 @@
       (.putObject s3-client
                   upload-target
                   (sane-s3-filename (:filename entry))
-                  (java.io.File. (:filename entry))))
+                  (java.io.File. (:filename entry)))
+      (.delete (java.io.File. (:filename entry))))
     (println (str "Would upload " entry " into s3 but --upload-bucket <bucketname> is not set "))
     ))
 
