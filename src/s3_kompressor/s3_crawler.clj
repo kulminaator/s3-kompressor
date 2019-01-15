@@ -77,7 +77,8 @@
   (let [client (get-client)]
     (loop [object-list (list-objects client bucket prefix)]
       (let [sharded-work (partition-all 50 (extract-summaries object-list))]
-        (let [workers-to-wait-for (doall (map #(async-pass-to-channel % channel (get-client)) sharded-work))]
+        ;; maybe replace get-client here with just client to reutilize the client from above ?
+        (let [workers-to-wait-for (doall (map #(async-pass-to-channel % channel client) sharded-work))]
           (doseq [w workers-to-wait-for]
             (deref w))
           )
@@ -87,3 +88,25 @@
       )
     )
   (async/close! channel))
+
+(defn handle-upload
+  [upload-target entry]
+  (println (str "Would upload" entry)))
+
+(defn build-uploader
+  "Builds an async worker that fetches entries from upload channel and uploads them.
+    Once upload channel is closed the worker closes itself."
+  [upload-channel upload-target worker-number]
+  (async/thread
+   (loop [uploadable (async/<!! upload-channel)]
+     (when uploadable
+       (handle-upload upload-target (async/<!! upload-channel))
+       (recur [uploadable (async/<!! upload-channel)]))
+     )
+   "upload worker done"))
+
+(defn build-uploaders
+  "Builds uploader processes that upload entries from upload-channel to s3 into upload-target"
+  [upload-channel upload-target worker-count]
+  (let [client (get-client)]
+    (doall (map #(build-uploader upload-channel upload-target %) (range worker-count)))))

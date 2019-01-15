@@ -39,23 +39,39 @@
 (defn pretty-timestamp[]
   "right-now")
 
+(defn wait-for-all
+  "Waits for every uploader worker to finish by trying to read their return channel."
+  [uploaders]
+  (doseq [upload-worker uploaders]
+    (async/<!! upload-worker)))
+
 (defn simple-zip-file
   "Creates one big zip file or many small ones based on options and input provided."
   [params]
   (validate-simple-zip-options (:options params))
   (let [bucket (get (:options params) "--bucket")
         prefix (get (:options params) "--prefix")
+        upload-target (get (:options params) "--upload-bucket")
         split-size-mb (parse-int (get (:options params) "--split-size"))
         writer-threads (or (parse-int (get (:options params) "--writer-threads")) 1)
-        transport-channel (async/chan 25)]
-    (println "Allocated internal channel of 25 elements")
+        transport-channel (async/chan 25)
+        upload-channel (async/chan 10)
+        uploaders (s3/build-uploaders upload-channel upload-target 10)]
+    (println "Allocated internal channel of 25 elements for downloads")
+    (println "Allocated internal channel of 10 elements for uploads")
     (async/thread (s3/list-objects-to-channel bucket prefix transport-channel))
+    ;; start reading downloadable data and write them to zip files
     (z/write-zips-from-channel {
                         :filename-base (str "/tmp/backup.part." (pretty-timestamp))
                         :transport-channel transport-channel
                         :split-size (guess-split-size split-size-mb)
                         :writer-threads writer-threads
-     })))
+                        :upload-channel upload-channel
+     })
+    ;; signal that no more items are queued for uploads anymore
+    (async/close! upload-channel)
+    (wait-for-all uploaders)
+    ))
 
 (defn parse-params
   "Parses the command line arguments for paramsuration"
