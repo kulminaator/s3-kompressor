@@ -89,18 +89,30 @@
     )
   (async/close! channel))
 
+(defn sane-s3-filename [original]
+  ; discard any folder name and replace it with hardcoded "uploads/" for now
+  (clojure.string/replace original #".*/" "uploads/"))
+
 (defn handle-upload
-  [upload-target entry]
-  (println (str "Would upload" entry)))
+  [upload-target entry ^AmazonS3 s3-client]
+  (if upload-target
+    (do
+      (println (str "Uploading " entry " to " upload-target))
+      (.putObject s3-client
+                  upload-target
+                  (sane-s3-filename (:filename entry))
+                  (java.io.File. (:filename entry))))
+    (println (str "Would upload " entry " into s3 but --upload-bucket <bucketname> is not set "))
+    ))
 
 (defn build-uploader
   "Builds an async worker that fetches entries from upload channel and uploads them.
     Once upload channel is closed the worker closes itself."
-  [upload-channel upload-target worker-number]
+  [upload-channel upload-target s3-client worker-number]
   (async/thread
    (loop [uploadable (async/<!! upload-channel)]
      (when uploadable
-       (handle-upload upload-target uploadable)
+       (handle-upload upload-target uploadable s3-client)
        (recur (async/<!! upload-channel))))
    "upload worker done"))
 
@@ -108,4 +120,4 @@
   "Builds uploader processes that upload entries from upload-channel to s3 into upload-target"
   [upload-channel upload-target worker-count]
   (let [client (get-client)]
-    (doall (map #(build-uploader upload-channel upload-target %) (range worker-count)))))
+    (doall (map #(build-uploader upload-channel upload-target client %) (range worker-count)))))
