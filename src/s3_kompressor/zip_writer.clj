@@ -67,7 +67,7 @@
   (+ (:written workpoint)
      (:size (:file-to-add workpoint))))
 
-(defn add-file-top-zip-output
+(defn add-file-to-zip-output
   "File has to be a map of :name, :modified-at and :input-stream-fn (function to open stream for reading)."
   [file-to-add zip-output]
   (.putNextEntry ^ZipOutputStream (:stream zip-output) (create-zip-entry (:name file-to-add)
@@ -90,7 +90,7 @@
         ; actual work
         (println (str "Adding " (:name (:file-to-add workpoint))
                       " at " (:written workpoint) " next roll " (:next-roll workpoint)))
-        (add-file-top-zip-output (:file-to-add workpoint) (:zip-output workpoint))
+        (add-file-to-zip-output (:file-to-add workpoint) (:zip-output workpoint))
         ; recur block
         (recur
           (merge workpoint {
