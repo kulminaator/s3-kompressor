@@ -37,7 +37,7 @@
   (* (or split-size-mb 10) 1024 1024))
 
 (defn pretty-timestamp[]
-  "right-now")
+  (.format (java.time.LocalDateTime/now) (java.time.format.DateTimeFormatter/ofPattern "yyyyMMdd-HHmmss")))
 
 (defn wait-for-all
   "Waits for every uploader worker to finish by trying to read their return channel."
