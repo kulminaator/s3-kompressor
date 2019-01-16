@@ -54,10 +54,10 @@
         upload-target (get (:options params) "--upload-bucket")
         split-size-mb (parse-int (get (:options params) "--split-size"))
         writer-threads (or (parse-int (get (:options params) "--writer-threads")) 1)
-        transport-channel (async/chan 500)
+        transport-channel (async/chan 2500)
         upload-channel (async/chan 10)
         uploaders (s3/build-uploaders upload-channel upload-target 10)]
-    (println "Allocated internal channel of 500 elements for downloads")
+    (println "Allocated internal channel of 2500 elements for downloads")
     (println "Allocated internal channel of 10 elements for uploads")
     (async/thread (s3/list-objects-to-channel bucket prefix transport-channel))
     ;; start reading downloadable data and write them to zip files
