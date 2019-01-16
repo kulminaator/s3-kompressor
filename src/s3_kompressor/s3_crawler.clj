@@ -95,9 +95,11 @@
   [bucket prefix channel]
   (let [client (get-client)]
     (loop [object-list (list-objects client bucket prefix)]
-      (doseq [s3-summary object-list]
-        (async/>!! channel (build-result-object client s3-summary))
-        (println (str "Queued " (get-key s3-summary))))
+      (let [summaries (.getObjectSummaries result)]
+        (doseq [s3-summary summaries]
+          (async/>!! channel (build-result-object client s3-summary))
+          (println (str "Queued " (get-key s3-summary))))
+        )
       (when (is-truncated? object-list)
         (recur (list-next-objects client bucket prefix object-list)))
       )
