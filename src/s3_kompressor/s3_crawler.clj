@@ -6,6 +6,7 @@
 
 (defn build-s3-client-config ^com.amazonaws.ClientConfiguration[]
   (doto (com.amazonaws.ClientConfiguration.)
+        (.setMaxConnections 100)
         ; 1 min timeouts
         (.setSocketTimeout 60000)
         (.setConnectionTimeout 60000)
