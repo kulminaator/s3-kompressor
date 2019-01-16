@@ -68,12 +68,13 @@
 
 (defn build-result-object
   [^AmazonS3 client ^S3ObjectSummary s3-summary]
-  (let [already-opened (read-from-s3 client (.getBucketName s3-summary) (.getKey s3-summary))]
+  (let [already-opened  false] ;(read-from-s3 client (.getBucketName s3-summary) (.getKey s3-summary))]
     {
       :name (.getKey s3-summary)
       :size (.getSize s3-summary)
       :modified-at (.getLastModified s3-summary)
-      :input-stream-fn (fn [] already-opened)
+      ;:input-stream-fn (fn [] already-opened)
+      :input-stream-fn (read-from-s3 client (.getBucketName s3-summary) (.getKey s3-summary))
       }))
 
 (defn get-key
