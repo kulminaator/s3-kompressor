@@ -4,11 +4,29 @@
            (com.amazonaws.services.s3.model ListObjectsV2Result ListObjectsV2Request S3ObjectSummary))
   (:require [clojure.core.async :as async]))
 
+(defn build-s3-client-config ^com.amazonaws.ClientConfiguration[]
+  (doto (com.amazonaws.ClientConfiguration.)
+        ; 1 min timeouts
+        (.setSocketTimeout 60000)
+        (.setConnectionTimeout 60000)
+        ; ttl for 1 hour if we can
+        (.setConnectionTTL 3600000)
+        ;; allow long idle, 5 minutes, keep tcp alive with tcp-keep-alive
+        (.setConnectionMaxIdleMillis 900000)
+        (.setUseTcpKeepAlive true)
+        (.setRetryPolicy (com.amazonaws.retry.RetryPolicy.
+                           com.amazonaws.retry.PredefinedRetryPolicies/DEFAULT_RETRY_CONDITION
+                           com.amazonaws.retry.PredefinedRetryPolicies/DEFAULT_BACKOFF_STRATEGY
+                           10
+                           true))
+        ))
+
 (defn get-client ^AmazonS3
   []
+  ;(println (build-s3-client-config))
   (-> (AmazonS3ClientBuilder/standard)
       (.withRegion "eu-west-1")
-      ;(.withCredentials (com.amazonaws.auth.AWSStaticCredentialsProvider. (com.amazonaws.auth.AnonymousAWSCredentials.)))
+      (.withClientConfiguration (build-s3-client-config))
       (.build)))
 
 (defn ^String extract-next-token
