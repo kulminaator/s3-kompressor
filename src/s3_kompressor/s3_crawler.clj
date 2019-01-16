@@ -81,13 +81,13 @@
   [^S3ObjectSummary s3-summary]
   (.getKey s3-summary))
 
-
-(defn async-pass-to-channel
-  [shard channel client]
-  (println (str (.getId (Thread/currentThread)) " Shard " (first shard) (last shard)))
-  (future (doseq [s3-summary shard]
-            (async/>!! channel (build-result-object client s3-summary))
-            (println (str "Queued " (get-key s3-summary) " " (.getId (Thread/currentThread)))))))
+;
+;(defn async-pass-to-channel
+;  [shard channel client]
+;  (println (str (.getId (Thread/currentThread)) " Shard " (first shard) (last shard)))
+;  (future (doseq [s3-summary shard]
+;            (async/>!! channel (build-result-object client s3-summary))
+;            (println (str "Queued " (get-key s3-summary) " " (.getId (Thread/currentThread)))))))
 
 
 (defn list-objects-to-channel
@@ -95,13 +95,9 @@
   [bucket prefix channel]
   (let [client (get-client)]
     (loop [object-list (list-objects client bucket prefix)]
-      (let [sharded-work (partition-all 50 (extract-summaries object-list))]
-        ;; maybe replace get-client here with just client to reutilize the client from above ?
-        (let [workers-to-wait-for (doall (map #(async-pass-to-channel % channel client) sharded-work))]
-          (doseq [w workers-to-wait-for]
-            (deref w))
-          )
-        )
+      (doseq [s3-summary object-list]
+        (async/>!! channel (build-result-object client s3-summary))
+        (println (str "Queued " (get-key s3-summary))))
       (when (is-truncated? object-list)
         (recur (list-next-objects client bucket prefix object-list)))
       )
