@@ -14,21 +14,6 @@
 (defn open-stream ^java.io.InputStream [fn]
   (fn))
 
-(defn write-zip-from2
-  "Keeps on taking elements from channel and writes them to the zipfile.
-  Tries to create splitted files if split-size is not nil."
-  [filename transport-channel split-size]
-  (with-open [zip-output (ZipOutputStream. (clojure.java.io/output-stream filename))]
-    (let [has-more (atom true)]
-      (loop [file-to-add (async/<!! transport-channel)]
-        (when file-to-add
-          (println (str "Adding " (:name file-to-add)))
-          (.putNextEntry zip-output (create-zip-entry (:name file-to-add)))
-          (with-open [instream (open-stream (:input-stream-fn file-to-add))]
-            (clojure.java.io/copy instream zip-output :buffer-size 32768))
-          (recur (async/<!! transport-channel))))
-      )))
-
 (defn make-zip-name
   [^String base ^long offset]
   (format "%s-%016x.zip" base offset))
