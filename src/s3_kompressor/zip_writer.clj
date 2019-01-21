@@ -41,18 +41,25 @@
 
 (defn make-zip-output
   [filename]
-  {
+  (let [index-filename (str filename ".index")]
+    {
     :stream (ZipOutputStream. (clojure.java.io/output-stream filename))
     :filename filename
-    })
+    :index-writer (clojure.java.io/writer index-filename)
+    :index-filename index-filename
+    }))
 
 (defn flush-and-close-zip-output
   [zip-output settings]
-  (let [^ZipOutputStream stream (:stream zip-output)]
+  (let [^ZipOutputStream stream (:stream zip-output)
+        ^java.io.Writer index-writer (:index-writer zip-output)]
     (.flush stream)
     (.close stream)
+    (.flush index-writer)
+    (.close index-writer)
     ;; register the closed zip file to be uploaded into s3
-    (async/>!! (:upload-channel settings) {:filename (:filename zip-output)})))
+    (async/>!! (:upload-channel settings) {:filename (:filename zip-output)})
+    (async/>!! (:upload-channel settings) {:filename (:index-filename zip-output)})))
 
 (defn roll-zip-if-needed
   [current-output filename-base written next-roll settings]
@@ -75,7 +82,8 @@
   (.putNextEntry ^ZipOutputStream (:stream zip-output) (create-zip-entry (:name file-to-add)
                                               (:modified-at file-to-add)))
   (with-open [instream (open-stream (:input-stream-fn file-to-add))]
-    (clojure.java.io/copy instream (:stream zip-output) :buffer-size 32768)))
+    (clojure.java.io/copy instream (:stream zip-output) :buffer-size 32768))
+  (.write ^java.io.Writer (:index-writer zip-output) (str (:name file-to-add) "\n")))
 
 (defn internal-write-zip-from
   "Keeps on taking elements from channel and writes them to the zipfile.
