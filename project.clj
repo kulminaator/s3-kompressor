@@ -1,4 +1,4 @@
-(defproject s3-kompressor "1.1.0-SNAPSHOT"
+(defproject s3-kompressor "1.2.0-SNAPSHOT"
   :description "Small tool to create compressed snapshots of your data (objects, files) on aws s3 buckets."
   :url "https://github.com/kulminaator/s3-kompressor"
   :license {:name "MIT License"
