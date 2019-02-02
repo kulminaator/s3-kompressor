@@ -45,6 +45,12 @@
   (doseq [upload-worker uploaders]
     (async/<!! upload-worker)))
 
+(defn create-filename-base [pretty-typed-timestamp]
+  (str "/tmp/backup.part." pretty-typed-timestamp))
+
+(defn create-upload-prefix [pretty-typed-timestamp]
+  (str "uploads/" pretty-typed-timestamp "/"))
+
 (defn simple-zip-file
   "Creates one big zip file or many small ones based on options and input provided."
   [params]
@@ -56,13 +62,15 @@
         writer-threads (or (parse-int (get (:options params) "--writer-threads")) 1)
         transport-channel (async/chan 2500)
         upload-channel (async/chan 10)
-        uploaders (s3/build-uploaders upload-channel upload-target 10)]
+        uploaders (s3/build-uploaders upload-channel upload-target 10)
+        pretty-typed-timestamp (pretty-timestamp)]
     (println "Allocated internal channel of 2500 elements for downloads")
     (println "Allocated internal channel of 10 elements for uploads")
     (async/thread (s3/list-objects-to-channel bucket prefix transport-channel))
     ;; start reading downloadable data and write them to zip files
     (z/write-zips-from-channel {
-                        :filename-base (str "/tmp/backup.part." (pretty-timestamp))
+                        :filename-base (create-filename-base pretty-typed-timestamp)
+                        :upload-prefix (create-upload-prefix pretty-typed-timestamp)
                         :transport-channel transport-channel
                         :split-size (guess-split-size split-size-mb)
                         :writer-threads writer-threads

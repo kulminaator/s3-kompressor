@@ -107,9 +107,9 @@
     )
   (async/close! channel))
 
-(defn sane-s3-filename [original]
-  ; discard any folder name and replace it with hardcoded "uploads/" for now
-  (clojure.string/replace original #".*/" "uploads/"))
+(defn sane-s3-filename [original upload-prefix]
+  ; discard any folder name and replace it with hardcoded "uploads/<timestamp>/" for now
+  (clojure.string/replace original #".*/" upload-prefix))
 
 (defn handle-upload
   [upload-target entry ^AmazonS3 s3-client]
@@ -118,7 +118,7 @@
       (println (str "Uploading " entry " to " upload-target))
       (.putObject s3-client
                   upload-target
-                  (sane-s3-filename (:filename entry))
+                  (sane-s3-filename (:filename entry) (:upload-prefix entry))
                   (java.io.File. (:filename entry)))
       (.delete (java.io.File. (:filename entry))))
     (println (str "Would upload " entry " into s3 but --upload-bucket <bucketname> is not set "))

@@ -43,8 +43,10 @@
     (.flush index-writer)
     (.close index-writer)
     ;; register the closed zip file to be uploaded into s3
-    (async/>!! (:upload-channel settings) {:filename (:filename zip-output)})
-    (async/>!! (:upload-channel settings) {:filename (:index-filename zip-output)})))
+    (async/>!! (:upload-channel settings)
+               {:filename (:filename zip-output) :upload-prefix (:upload-prefix settings)})
+    (async/>!! (:upload-channel settings)
+               {:filename (:index-filename zip-output) :upload-prefix (:upload-prefix settings)})))
 
 (defn roll-zip-if-needed
   [current-output filename-base written next-roll settings]
